@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Sensor Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- FileSaver.js for exporting data -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Font: Space Mono for sci-fi feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-['Space_Mono']">
+    <div class="container mx-auto p-4">
+        <header class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">Environmental Sensor Dashboard</h1>
+            <p class="text-center text-gray-400 mt-2">Real-time monitoring of temperature, humidity, and gas levels</p>
+        </header>
+
+        <!-- API Configuration -->
+        <div id="apiConfig" class="mb-8 p-4 bg-gray-800 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-4 text-cyan-400">ThingSpeak API Configuration</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="channelId" class="block text-sm font-medium mb-1">Channel ID</label>
+                    <input type="text" id="channelId" placeholder="Example: 2922458" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                </div>
+                <div>
+                    <label for="apiKey" class="block text-sm font-medium mb-1">Read API Key</label>
+                    <input type="text" id="apiKey" placeholder="Example: 9SQ7ZVI6LIN2HU8F" class="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                </div>
+            </div>
+            <div class="mt-3 text-sm text-gray-400">
+                <p>This dashboard connects to an ESP8266 with DHT11 (temperature/humidity) and MQ gas sensors.</p>
+                <p class="mt-1">Sample API endpoints: <code class="bg-gray-700 px-1 rounded">GET https://api.thingspeak.com/channels/CHANNEL_ID/feeds.json?api_key=READ_API_KEY&results=100</code></p>
+            </div>
+            <button id="saveConfig" class="mt-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-cyan-500">Save Configuration</button>
+            <div id="configStatus" class="mt-2 text-sm hidden"></div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="flex justify-center items-center py-10 hidden">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
+            <span class="ml-3">Loading sensor data...</span>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorDisplay" class="bg-red-900/50 text-red-200 p-4 rounded-lg mb-8 hidden">
+            <h3 class="font-bold text-red-300">Error</h3>
+            <p id="errorMessage"></p>
+        </div>
+
+        <!-- Current Readings Section -->
+        <section id="currentReadings" class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">Temperature</h2>
+                <div class="flex justify-center">
+                    <div class="temperature-gauge relative w-32 h-32">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" stroke-width="10" />
+                            <circle id="temperatureGauge" cx="50" cy="50" r="45" fill="none" stroke="#06b6d4" stroke-width="10" 
+                                    stroke-dasharray="282.7" stroke-dashoffset="282.7" transform="rotate(-90 50 50)" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span id="temperatureValue" class="text-2xl font-bold">--</span>
+                            <span class="text-xs text-gray-400">°C</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">Humidity</h2>
+                <div class="flex justify-center">
+                    <div class="humidity-gauge relative w-32 h-32">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" stroke-width="10" />
+                            <circle id="humidityGauge" cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="10" 
+                                    stroke-dasharray="282.7" stroke-dashoffset="282.7" transform="rotate(-90 50 50)" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span id="humidityValue" class="text-2xl font-bold">--</span>
+                            <span class="text-xs text-gray-400">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-lg font-bold mb-2 text-center text-cyan-400">Gas Level</h2>
+                <div class="flex justify-center">
+                    <div class="gas-gauge relative w-32 h-32">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" stroke-width="10" />
+                            <circle id="gasGauge" cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="10" 
+                                    stroke-dasharray="282.7" stroke-dashoffset="282.7" transform="rotate(-90 50 50)" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span id="gasValue" class="text-2xl font-bold">--</span>
+                            <span class="text-xs text-gray-400">ppm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-span-1 md:col-span-3 text-xs text-gray-400 text-center">
+                <p>Last updated: <span id="lastUpdateTime">--</span></p>
+            </div>
+        </section>
+
+        <!-- Historical Data Section -->
+        <section id="historicalData" class="mb-8 hidden">
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-cyan-400">Historical Data</h2>
+                    <div class="flex space-x-2">
+                        <button data-range="24h" class="time-range-btn bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm">24h</button>
+                        <button data-range="7d" class="time-range-btn bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm">7d</button>
+                        <button data-range="30d" class="time-range-btn bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm">30d</button>
+                    </div>
+                </div>
+                <div class="chart-container" style="position: relative; height:50vh; width:100%">
+                    <canvas id="historyChart"></canvas>
+                </div>
+                <button id="exportData" class="mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+                    Export as CSV
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

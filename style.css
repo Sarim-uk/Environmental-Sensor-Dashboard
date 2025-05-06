@@ -1,0 +1,75 @@
+/* Custom styles for IoT Sensor Dashboard */
+
+/* Neon glow effect for text */
+.neon-text {
+  text-shadow: 0 0 5px rgba(6, 182, 212, 0.5), 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+/* Pulse animation for active sensors */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(6, 182, 212, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+  }
+}
+
+.sensor-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Smooth gauge animations */
+.temperature-gauge circle, .humidity-gauge circle, .gas-gauge circle {
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+/* Subtle grid background */
+body {
+  background-image: 
+    linear-gradient(rgba(17, 24, 39, 0.95) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.95) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: -1px -1px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* Data point hover effect for charts */
+.data-point-hover {
+  transition: all 0.2s ease;
+  filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.8));
+}
+
+/* Selected time range button styling */
+.time-range-btn.active {
+  background-color: #0891b2;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .chart-container {
+    height: 40vh !important;
+  }
+} 
